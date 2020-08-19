@@ -9,12 +9,15 @@
           <a-descriptions-item label="Port">{{this.DbInfo.Port}}</a-descriptions-item>
           <a-descriptions-item label="DataSize">{{this.DbInfo.DataSize}}</a-descriptions-item>
           <a-descriptions-item label="Uptime" :span="2">{{this.DbInfo.Uptime}}</a-descriptions-item>
-          <a-descriptions-item label="Status" :span="3">
-            <a-badge status="processing" v-text="this.DbInfo.Status" />
-          </a-descriptions-item>
           <a-descriptions-item label="Processlist">{{this.ProcesslistSize}}</a-descriptions-item>
           <a-descriptions-item label="QPS">{{this.QPS}}m/s</a-descriptions-item>
           <a-descriptions-item label="TPS">{{this.TPS}}m/s</a-descriptions-item>
+          <a-descriptions-item label="SlowQueryLogFile Path">{{this.DbInfo.SlowQueryLogFile}}</a-descriptions-item>
+          <a-descriptions-item label="LongQuery Time">{{this.DbInfo.LongQueryTime}}</a-descriptions-item>
+          <a-descriptions-item label="SlowQueryLog Status">{{this.DbInfo.SlowQueryLog}}</a-descriptions-item>
+          <a-descriptions-item label="Status" :span="3">
+            <a-badge status="processing" v-text="this.DbInfo.Status" />
+          </a-descriptions-item>
         </a-descriptions>
       </a-col>
       <a-col :flex="3">
@@ -28,10 +31,9 @@
                   :precision="2"
                   suffix="%"
                   :value-style="{ color: '#cf1322' }"
-                  style="margin-right: 50px"
+                  style="margin-right: 10px"
                 >
-                  <template #prefix>
-                  </template>
+                  <template #prefix></template>
                 </a-statistic>
               </a-card>
             </a-col>
@@ -45,8 +47,7 @@
                   class="demo-class"
                   :value-style="{ color: '#cf1322' }"
                 >
-                  <template #prefix>
-                  </template>
+                  <template #prefix></template>
                 </a-statistic>
               </a-card>
             </a-col>
@@ -62,10 +63,9 @@
                   :precision="2"
                   suffix="%"
                   :value-style="{ color: '#cf1322' }"
-                  style="margin-right: 50px"
+                  style="margin-right: 10px"
                 >
-                  <template #prefix>
-                  </template>
+                  <template #prefix></template>
                 </a-statistic>
               </a-card>
             </a-col>
@@ -79,8 +79,7 @@
                   class="demo-class"
                   :value-style="{ color: '#cf1322' }"
                 >
-                  <template #prefix>
-                  </template>
+                  <template #prefix></template>
                 </a-statistic>
               </a-card>
             </a-col>
@@ -88,10 +87,10 @@
         </div>
       </a-col>
     </a-row>
-    <a-divider orientation="left">连接数</a-divider>
+    <a-divider orientation="left">Processlist</a-divider>
     <a-row type="flex">
       <a-col flex="100%">
-        <a-table :columns="columns" :data-source="Processlist">
+        <a-table :columns="columns" :data-source="Processlist" rowKey="Id">
           <a slot="name" slot-scope="text">{{ text }}</a>
           <span slot="customTitle">
             <a-icon type="smile-o" />Name
@@ -103,16 +102,6 @@
               :color="tag === 'loser' ? 'volcano' : tag.length > 5 ? 'geekblue' : 'green'"
             >{{ tag.toUpperCase() }}</a-tag>
           </span>
-          <span slot="action" slot-scope="text, record">
-            <a>Invite 一 {{ record.name }}</a>
-            <a-divider type="vertical" />
-            <a>Delete</a>
-            <a-divider type="vertical" />
-            <a class="ant-dropdown-link">
-              More actions
-              <a-icon type="down" />
-            </a>
-          </span>
         </a-table>
       </a-col>
     </a-row>
@@ -121,6 +110,7 @@
 <script>
 const columns = [
   {
+    title: "Id",
     dataIndex: "Id",
     key: "Id",
     slots: { title: "Id" },
@@ -166,15 +156,10 @@ const columns = [
     dataIndex: "Time",
     scopedSlots: { customRender: "Time" },
   },
-  {
-    title: "Action",
-    key: "action",
-    scopedSlots: { customRender: "action" },
-  },
 ];
 
 import axios from "axios";
-import website from '../config/webstie'
+import website from "../config/webstie";
 export default {
   data() {
     return {
@@ -185,8 +170,8 @@ export default {
       QPS: 0,
       keyBufferRead: "",
       keyBufferWrite: "",
-      queryCache:"",
-      threadCache:"",
+      queryCache: "",
+      threadCache: "",
       columns,
     };
   },
@@ -200,18 +185,47 @@ export default {
     this.getThreadCache();
   },
   methods: {
+    formatDuring(value) {
+      var secondTime = parseInt(value); // 秒
+      var minuteTime = 0; // 分
+      var hourTime = 0; // 小时
+      if (secondTime > 60) {
+        //如果秒数大于60，将秒数转换成整数
+        //获取分钟，除以60取整数，得到整数分钟
+        minuteTime = parseInt(secondTime / 60);
+        //获取秒数，秒数取佘，得到整数秒数
+        secondTime = parseInt(secondTime % 60);
+        //如果分钟大于60，将分钟转换成小时
+        if (minuteTime > 60) {
+          //获取小时，获取分钟除以60，得到整数小时
+          hourTime = parseInt(minuteTime / 60);
+          //获取小时后取佘的分，获取分钟除以60取佘的分
+          minuteTime = parseInt(minuteTime % 60);
+        }
+      }
+      var result = "" + parseInt(secondTime) + "秒";
+
+      if (minuteTime > 0) {
+        result = "" + parseInt(minuteTime) + "分" + result;
+      }
+      if (hourTime > 0) {
+        result = "" + parseInt(hourTime) + "小时" + result;
+      }
+      return result;
+    },
     getDBInfo() {
       axios
-        .get(website.URL+"base/dataBaseStatus", {
+        .get(website.URL + "base/dataBaseStatus", {
           params: {},
         })
         .then((res) => {
           this.DbInfo = res.data.data;
+          this.DbInfo.Uptime = this.formatDuring(this.DbInfo.Uptime);
         });
     },
     getProcesslist() {
       axios
-        .get(website.URL+"base/processlist", {
+        .get(website.URL + "base/processlist", {
           params: {},
         })
         .then((res) => {
@@ -221,7 +235,7 @@ export default {
     },
     getQPS() {
       axios
-        .get(website.URL+"base/qps", {
+        .get(website.URL + "base/qps", {
           params: {},
         })
         .then((res) => {
@@ -231,7 +245,7 @@ export default {
     },
     getTPS() {
       axios
-        .get(website.URL+"base/tps", {
+        .get(website.URL + "base/tps", {
           params: {},
         })
         .then((res) => {
@@ -241,12 +255,12 @@ export default {
     },
     getKeyBuffer() {
       axios
-        .get(website.URL+"base/keyBuffer", {
+        .get(website.URL + "base/keyBuffer", {
           params: {},
         })
         .then((res) => {
-          this.keyBufferRead =  res.data.data[0].Value;
-          this.keyBufferWrite =  res.data.data[1].Value;
+          this.keyBufferRead = res.data.data[0].Value;
+          this.keyBufferWrite = res.data.data[1].Value;
         });
     },
     // getInnodbBuffer() {
@@ -259,20 +273,20 @@ export default {
     // },
     getQueryCache() {
       axios
-        .get(website.URL+"base/queryCache", {
+        .get(website.URL + "base/queryCache", {
           params: {},
         })
         .then((res) => {
-          this.queryCache =  res.data.data.Value;
+          this.queryCache = res.data.data.Value;
         });
     },
     getThreadCache() {
       axios
-        .get(website.URL+"base/threadCache", {
+        .get(website.URL + "base/threadCache", {
           params: {},
         })
         .then((res) => {
-                 this.threadCache =  res.data.data.Value;
+          this.threadCache = res.data.data.Value;
         });
     },
   },
