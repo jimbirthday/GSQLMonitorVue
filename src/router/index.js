@@ -30,11 +30,11 @@ Vue.use(VueRouter)
   ,
   {
     path: '/slow',
-    name: 'Slowsql',
+    name: 'SlowSql',
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/Explain.vue')
+    component: () => import(/* webpackChunkName: "about" */ '../views/SlowSql.vue')
   }
 ]
 
